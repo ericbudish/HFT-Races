@@ -1,8 +1,8 @@
 '''
 code_snippet_trade_level_data.py
 
-This snippet is the code we used to generate the trade level data with race information. It can be used to 
-produce the statistics for 
+This snippet is the code we used to generate the trade level data with race information. 
+It can be used to produce the statistics for 
     1. Figure 4.3 Panel B % Liquidity provided in races
     2. Table 4.4 Taker provider matrix
     3. Table 4.11 Realized spread 

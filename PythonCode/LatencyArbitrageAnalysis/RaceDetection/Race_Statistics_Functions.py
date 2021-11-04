@@ -1,26 +1,25 @@
 '''
 Race_Statistics_Functions.py
 
-This script contains the race stats function GenerateSingleLvlStats(). 
+This module contains the race stats function generate_race_stats(). 
 It is called in Race_Detection_and_Statistics.py to compute race stats.                      
 '''
 from collections import OrderedDict
 import numpy as np
 import pandas as pd
 
-from .Race_Msg_Outcome import GetOutcome
+from .Race_Msg_Outcome import get_msg_outcome
 
-#np.warnings.filterwarnings('ignore')
 ######################
 ## Main Functions ##
 ######################
 
-def GenerateSingleLvlStats(date, sym, msgs, top, depth, race_recs, ticktable, price_factor, \
+def generate_race_stats(date, sym, msgs, top, depth, race_recs, ticktable, price_factor, \
                            race_param):
     '''
     This function generates single level race stats for a given symdate after race detection.
     This function loops over each row in race record (output of race detection code) and calls 
-    FindSingleLvlRaces() on each row to generate stats for each race. 
+    find_single_lvl_races() on each row to generate stats for each race. 
     
     Param: Please refer to Section 10.5 of the Code and Data Appendix.
         msgs: df of msgs
@@ -61,7 +60,7 @@ def GenerateSingleLvlStats(date, sym, msgs, top, depth, race_recs, ticktable, pr
     
     ##### Loop over races to populate statistics
     for ix, race in race_recs.iterrows():
-        stats[ix] = SingleLvlStats(race, msgs, me, me_qr_ask, me_qr_bid, top, depth,\
+        stats[ix] = stats_for_one_race(race, msgs, me, me_qr_ask, me_qr_bid, top, depth,\
                                    ticktable, price_factor, \
                                    strict_fail)
     ##### construct pd.DataFrame
@@ -70,7 +69,7 @@ def GenerateSingleLvlStats(date, sym, msgs, top, depth, race_recs, ticktable, pr
     stats['Symbol'] = sym
     return stats
     
-def SingleLvlStats(race, msgs, me, me_qr_ask, me_qr_bid, top, depth,\
+def stats_for_one_race(race, msgs, me, me_qr_ask, me_qr_bid, top, depth,\
                    ticktable, price_factor, strict_fail):
     '''
     This function generates stats for a singlelvl race
@@ -154,7 +153,7 @@ def SingleLvlStats(race, msgs, me, me_qr_ask, me_qr_bid, top, depth,\
     ### Write RaceRlvtOutcome with the msg outcome accounting for takes that are price dependent
     # Note that Outcome Classification is done twice: here and previously in race detection.
     # This is because we don't save the result of the outcome calculation.
-    race_msgs['%sRaceMsgOutcome' % S] = GetOutcome(S, P_Signed, race_msgs, strict_fail)
+    race_msgs['%sRaceMsgOutcome' % S] = get_msg_outcome(S, P_Signed, race_msgs, strict_fail)
     
     ###########################################################################
     ##### Race timings 
@@ -226,7 +225,7 @@ def SingleLvlStats(race, msgs, me, me_qr_ask, me_qr_bid, top, depth,\
                          'Event', 'BidRaceRlvtNoResponse', 'AskRaceRlvtNoResponse',
                          '%sRaceRlvtOutcomeGroup' % S, '%sRaceRlvtBestExecPriceLvlSigned' % S,'TIF', 'FirmID']]
     # Generate outcome
-    rel_msgs['Outcome'] = GetOutcome(S, P_Signed, rel_msgs, strict_fail)
+    rel_msgs['Outcome'] = get_msg_outcome(S, P_Signed, rel_msgs, strict_fail)
 
     ### Number of users/messages/firms (N/M/F) in Race Relevant Msgs
     # within T from the start of race for T = 50us, 100us, 200us, 500us, 1ms

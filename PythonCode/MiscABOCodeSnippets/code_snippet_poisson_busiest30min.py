@@ -36,6 +36,7 @@ import pickle
 import sys
 import os
 import importlib
+from LatencyArbitrageAnalysis.utils.Dtypes import dtypes_msgs, dtypes_top
 
 base = '/data/workspace2/gatewaydata/workingarea/proc/'
 
@@ -95,47 +96,9 @@ ticktables = pd.read_pickle(base + '/reference_data/Ticktables.pkl')
 ticktable = ticktables[info['Segment_ID'].item()][info['TickTable'].astype('int').item()][info['Curr'].item()]
 
 # Load message data
-dtypes_df = {'Source': 'O', 'SourceID': 'int64', 'StreamID': 'O','ConnectionID': 'O',
-             'GatewayIPAddress': 'O', 'GatewayPort': 'O', 'ID': 'int64', 'MessageTimestamp': 'O',
-             'UserID': 'O', 'MessageType': 'O', 'InstrumentID': 'O', 'ClientOrderID': 'O',
-             'OrderID': 'O', 'OrderStatus': 'O', 'OrderType': 'O', 'PublicOrderID': 'O',
-             'ExecType': 'O', 'TIF': 'O', 'ClOrdLinkID': 'O', 'ExpireDateTime': 'O',
-             'RawSide': 'O', 'OrderQty': 'float64', 'DisplayQty': 'float64',
-             'LimitPrice': 'int64', 'Capacity': 'O', 'OrderSubType': 'O', 'StoppedPrice': 'int64',
-             'Anonymity': 'O', 'PassiveOnlyOrder': 'O', 'OriginalClientOrderID': 'O',
-             'BidPrice': 'int64', 'BidSize': 'float64', 'AskPrice': 'int64',
-             'AskSize': 'float64', 'ExecutionID': 'O', 'OrderRejectCode': 'O',
-             'ExecutedPrice': 'int64', 'ExecutedQty': 'float64', 'LeavesQty': 'float64',
-             'Container': 'O', 'TradeMatchID': 'O', 'TransactTime': 'O', 'TypeOfTrade': 'O',
-             'MinQty': 'float64', 'DisplayMethod': 'O', 'PriceDifferential': 'O',
-             'CancelRejectReason': 'O', 'Symbol_Type': 'O', 'Segment_ID': 'O', 'Symbol': 'O',
-             'Date': 'O', 'Timestamp': 'O', 'FirmClass': 'O', 'FirmNum': 'float64',
-             'UserNum': 'float64', 'OrderNum': 'float64', 'QuoteRelated': 'bool',
-             'UniqueOrderID': 'O', 'Side': 'O', 'UnifiedMessageType': 'O',
-             'PrevPriceLvl': 'int64', 'PrevQty': 'float64', 'PriceLvl': 'int64',
-             'Classified': 'bool', 'EventNum': 'float64', 'Event': 'O', 'MinExecPriceLvl':'int64',
-             'MaxExecPriceLvl':'int64', 'PrevBidPriceLvl': 'int64', 'PrevBidQty': 'float64',
-             'BidPriceLvl': 'int64', 'BidClassified': 'bool', 'BidEventNum': 'float64',
-             'BidEvent': 'O', 'BidMinExecPriceLvl':'int64', 'BidMaxExecPriceLvl':'int64',
-             'PrevAskPriceLvl': 'int64', 'PrevAskQty': 'float64', 'AskPriceLvl': 'int64',
-             'AskClassified': 'bool', 'AskEventNum': 'float64', 'AskEvent': 'O',
-             'MinExecPriceLvl':'int64', 'MaxExecPriceLvl':'int64','PostOpenAuction':'bool', 'OpenAuction':'bool'}
-             
-df = pd.read_csv(infile_msgs, dtype = dtypes_df, parse_dates=['MessageTimestamp', 'Timestamp', 'ExpireDateTime', 'TransactTime'])
+df = pd.read_csv(infile_msgs, dtype = dtypes_msgs, parse_dates=['MessageTimestamp', 'Timestamp', 'ExpireDateTime', 'TransactTime'])
 
 # Load top-of-book data
-dtypes_top = {'Source': 'O', 'ID': 'int64', 'MessageTimestamp': 'O', 'Side': 'O',
-              'UnifiedMessageType': 'O', 'PrevBidPriceLvl': 'int64', 'BidPriceLvl': 'int64',
-              'PrevAskPriceLvl': 'int64', 'AskPriceLvl': 'int64', 'PrevPriceLvl': 'int64',
-              'PriceLvl': 'int64', 'PriceDifferential': 'O', 'BestBid': 'int64',
-              'BestBidQty': 'float64', 'BestBidQtyWithFQte': 'float64', 'BestAsk': 'int64',
-              'BestAskQty': 'float64', 'BestAskQtyWithFQte': 'float64', 'Spread': 'int64',
-              'MidPt': 'int64', 'last_BestBid': 'int64', 'last_BestAsk': 'int64',
-              'last_MidPt': 'int64', 't_last_chg_BestBid': 'O', 't_last_chg_BestAsk': 'O',
-              't_last_chg_MidPt': 'O', 'AskCorrections_notA': 'O', 'BidCorrections_notA': 'O',
-              'Corrections_OrderAccept': 'O', 'Corrections_PriceDiff': 'O', 'Corrections_Trade': 'O',
-              'DepthKilled': 'float64', 'BestBid_TickSize': 'float64', 'BestAsk_TickSize': 'float64',
-              'Diff_TickSize': 'O', 'f_Regular_Hours': 'O', 'Trade_Pos': 'O', 'BookUpdateParentMsgID': 'int64'}
 top = pd.read_csv(infile_top, index_col = 0, dtype = dtypes_top, parse_dates = ['MessageTimestamp', 't_last_chg_MidPt'])
 
 # Load other order book data
@@ -174,7 +137,7 @@ df, top = df.loc[post_open_auction], top.loc[post_open_auction]
 price_factor, to_GBX, to_GBP = 100000000, 1, .01
 
 reaction_time = np.timedelta64(29, 'us')
-df_races, top_races = PrepData.PrepareData(df, top, ticktable, price_factor, sess_id, reaction_time)
+df_races, top_races = PrepData.prepare_data(df, top, ticktable, price_factor, sess_id, reaction_time)
 df_races['N_Inbound_NBBO'] = 0
 df_races.loc[((df_races['AskRaceRlvtType'] == 'Take Attempt') & (df_races['AskRaceRlvtPriceLvlSigned'] >= top_races['BestAskSigned'])) |
              ((df_races['BidRaceRlvtType'] == 'Take Attempt') & (df_races['BidRaceRlvtPriceLvlSigned'] >= top_races['BestBidSigned'])) |

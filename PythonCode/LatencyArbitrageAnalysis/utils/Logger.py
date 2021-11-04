@@ -26,7 +26,6 @@ def getLogger(logpath, logfile, name):
     handler.setLevel(logging.INFO)
     formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
     handler.setFormatter(formatter)
-    logger.handlers = []
     logger.addHandler(handler)
     sys.stdout = LoggerWriter(logger, logging.WARNING)
     sys.stderr = LoggerWriter(logger, logging.ERROR)

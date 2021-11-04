@@ -1,19 +1,19 @@
 '''
 Race_Detection_Functions.py
 
-This script contains the race detection function FindSingleLvlRaces()
+This module contains the race detection function find_single_lvl_races()
 It is called in Race_Detection_and_Statistics.py to detect races.
 '''
 
 import numpy as np
 import pandas as pd
 
-from .Race_Msg_Outcome import GetOutcome
+from .Race_Msg_Outcome import get_msg_outcome
 ############################### 
 ## Main Functions ##
 ###############################
 
-def FindSingleLvlRaces(msgs, top, ticktable, race_param): 
+def find_single_lvl_races(msgs, top, ticktable, race_param): 
     '''
     Identify messages belonging to races on a single price level.
     Use baseline race criteria to check if a sequence of messages is a race.
@@ -75,7 +75,7 @@ def FindSingleLvlRaces(msgs, top, ticktable, race_param):
         5. At least one failed message 
         6. Additional requirement if strict_success == True: At least a failed take at P.
         7. No additional check for strict_fail because it is already taken into consideration
-           when we obtain "%sRaceRlvtMsgOutcome % S" via the GetOutcome function.
+           when we obtain "%sRaceRlvtMsgOutcome % S" via the get_msg_outcome function.
 
     '''
     # Load race parameters
@@ -163,7 +163,7 @@ def FindSingleLvlRaces(msgs, top, ticktable, race_param):
             #                bbo is also negative. So, the condition is satisfied when we are attempting
             #                to take at the best bid or lower (higher in negative signed price)
             elif valid[i] and take_attempt[i] and pr[i] >= bbo[i]:
-                possible_race_prices = GetPriceLvls(bbo[i], pr[i], ticktable) 
+                possible_race_prices = get_price_lvls(bbo[i], pr[i], ticktable) 
                 check_i_for_races = True
 
             # If Case 1 or Case 2 is True, check for races at the possible race prices
@@ -216,7 +216,7 @@ def FindSingleLvlRaces(msgs, top, ticktable, race_param):
                         # Get msg outcomes given if the message appears in a race at price p.
                         # This mostly matters for take attempts that are Race Price Dependent which will
                         # now be labeled as Success, Fail or Unknown given the race price p
-                        race_msgs['%sRaceRlvtMsgOutcome' % S] = GetOutcome(S, p, race_msgs, race_param['strict_fail'])
+                        race_msgs['%sRaceRlvtMsgOutcome' % S] = get_msg_outcome(S, p, race_msgs, race_param['strict_fail'])
                         
                         # Then check the sequence for a baseline race
                         # and update the race_recs dictionary if baseline race criteria satisfied.
@@ -260,7 +260,7 @@ def is_a_race(S, pr, race_msgs, race_param):
         5. At least one failed message 
         6. Additional requirement if strict_success == True: At least a failed take at P.
         7. No additional check for strict_fail because it is already taken into consideration
-           when we obtain "%sRaceRlvtMsgOutcome % S" via the GetOutcome function.
+           when we obtain "%sRaceRlvtMsgOutcome % S" via the get_msg_outcome function.
     '''
     # Set default
     is_a_race = False
@@ -299,12 +299,12 @@ def is_a_race(S, pr, race_msgs, race_param):
 
     # No additional check for strict_fail. 
     # This is because we already changed the definition of a fail 
-    # in "%sRaceRlvtMsgOutcome % S" via the GetOutcome function
+    # in "%sRaceRlvtMsgOutcome % S" via the get_msg_outcome function
     # if strict_fail == True.
 
     return is_a_race
 
-def GetPriceLvls(p_min, p_max, ticktable):
+def get_price_lvls(p_min, p_max, ticktable):
     '''
     This function returns the list of prices between two prices with tick size increments
     '''

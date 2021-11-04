@@ -1,9 +1,9 @@
 '''
 Prep_Race_Data.py
 
-This script has the function PrepareData().
+This module has the function prepare_data().
 It is called in Race_Detection_and_Statistics.py to prepare the message
-data and the top-of-book data for race detection. The PrepareData() function generates
+data and the top-of-book data for race detection. The prepare_data() function generates
 additional fields in the message data and top-of-book data. These fields 
 will be used for race detection.
 '''
@@ -14,7 +14,7 @@ import numpy as np
 ###############################
 
 
-def PrepareData(msgs, top):
+def prepare_data(msgs, top):
     '''
     This function prepares the msgs dataset for the race detection loop. 
     In particular, the function identifies the messages that could 
@@ -47,7 +47,7 @@ def PrepareData(msgs, top):
                                         the race
             - Ask/BidRaceRlvtNoResponse: whether the relevant message was an inbound with no response
 
-    This function changes msgs and calls the following helper functions:
+    This function adds new fields to the msgs dataframe and calls the following helper functions:
         gen_ask_races_fields
         gen_bid_races_fields
         get_processing_time
@@ -163,12 +163,12 @@ def PrepareData(msgs, top):
     # More detail can be found in Section 10.4 of the Code and Data Appendix
     # 
     # Ask Races
-    msgs = gen_ask_races_fields(msgs, top, is_qr, side_ask, side_bid, canc, new_limit, new_ioc, new_mkt,
+    msgs = gen_ask_races_fields(msgs, top, side_ask, side_bid, canc, new_limit, new_ioc, new_mkt,
                          crep, valid_prices, valid_bid_price, valid_ask_prices, new_quote,
                          valid_prev_price, valid_prev_ask_price)
                         
     # Bid Races
-    msgs = gen_bid_races_fields(msgs, top, is_qr, side_ask, side_bid, canc, new_limit, new_ioc, new_mkt,
+    msgs = gen_bid_races_fields(msgs, top, side_ask, side_bid, canc, new_limit, new_ioc, new_mkt,
                          crep, valid_prices, valid_bid_prices, valid_ask_price, new_quote,
                          valid_prev_price, valid_prev_bid_price)
    
@@ -204,13 +204,13 @@ def PrepareData(msgs, top):
 ## Helper Functions ##
 ###############################
 
-def gen_ask_races_fields(msgs, top, is_qr, side_ask, side_bid, canc, new_limit, new_ioc, new_mkt, crep, \
+def gen_ask_races_fields(msgs, top, side_ask, side_bid, canc, new_limit, new_ioc, new_mkt, crep, \
                         valid_prices, valid_bid_price, valid_ask_prices, new_quote, \
                         valid_prev_price, valid_prev_ask_price):
     '''
-    This function is called in PrepareData() and 
+    This function is called in prepare_data() and 
     changes msgs by adding race relevant ask fields.
-    The fields added to msgs are the following (see the docstring and PrepareData for detail):
+    The fields added to msgs are the following (see the docstring and prepare_data for detail):
         AskRaceRlvt
         AskRaceRlvtType
         AskRaceRlvtPriceLvl
@@ -390,14 +390,14 @@ def gen_ask_races_fields(msgs, top, is_qr, side_ask, side_bid, canc, new_limit, 
 
     return msgs                                                                                                            
                                 
-def gen_bid_races_fields(msgs, top, is_qr, side_ask, side_bid, canc, new_limit, new_ioc, new_mkt, crep, \
+def gen_bid_races_fields(msgs, top, side_ask, side_bid, canc, new_limit, new_ioc, new_mkt, crep, \
                         valid_prices, valid_bid_prices, valid_ask_price, new_quote, \
                         valid_prev_price, valid_prev_bid_price):
     '''
     Function generates and fills in all the relevant fields for bid races
-    This function is called in PrepareData() and 
+    This function is called in prepare_data() and 
     changes msgs by adding relevant bid race fields.
-    The fields added to msgs are the following (see the docstring and PrepareData for detail):
+    The fields added to msgs are the following (see the docstring and prepare_data for detail):
         BidRaceRlvt
         BidRaceRlvtType
         BidRaceRlvtPriceLvl

@@ -7,7 +7,9 @@ progress of the program run. Users can use this script
 to see how many sym-dates have been processed while 
 a run is still in progress, or to confirm that all
 symbol-dates have been processed at the end of a run. 
-Please do not remove the log files before a run is finished.
+
+Please do not remove the log files before a run is finished
+because we use the log files to monitor the progress.
 
 Reference: 
     Sections 6.3 and 7.4 of the Code and Data Appendix.

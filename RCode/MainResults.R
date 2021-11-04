@@ -8,12 +8,10 @@
 #' 
 #' Dependency: R (>=4.0.0)
 #' 
-#' Required packages: Required packages are listed in the 
-#' "LOAD PACKAGES" section below. Please use the following command to 
-#' install all the required packages:
-#' 
-#'    install.packages(c('data.table','R.utils','stargazer',
-#'    'Hmisc','ggridges','ggplot2','scales','dplyr','reshape2'))
+#' Required packages: The following required packages will be installed 
+#' automatically when running the R code:
+#'    'data.table','R.utils','stargazer',
+#'    'Hmisc','ggridges','ggplot2','scales','dplyr','reshape2'
 #' 
 #' To use this script to reproduce the results, 
 #' Step 1. Run the Python code following Sections 4-7 of the Code and Data Appendix.
@@ -184,11 +182,11 @@ stats.race.duration = race.stats[Time_S1_F1 >= min.duration & Time_S1_F1 <= max.
 outfile.name = 'Figure_RaceDuration_Hist'
 ## Plotting
 p = ggplot(data = stats.race.duration, aes(x = Time_S1_F1)) +
-      geom_histogram(binwidth = 5, center = 2.5) + 
-      scale_x_continuous(breaks = c(-100, 0, 100, 200, 300, 400, 500)) +
-      scale_y_continuous(labels = comma) + 
-      labs(x = 'Time from Success 1 to Fail 1 (microseconds)', y = 'Count') + 
-      theme_gray(base_size = 12.5)
+  geom_histogram(binwidth = 5, center = 2.5) + 
+  scale_x_continuous(breaks = c(-100, 0, 100, 200, 300, 400, 500)) +
+  scale_y_continuous(labels = comma) + 
+  labs(x = 'Time from Success 1 to Fail 1 (microseconds)', y = 'Count') + 
+  theme_gray(base_size = 12.5)
 ggsave(file = file.path(out.dir, paste(outfile.name, '.pdf', sep = '')), width = 5, height = 4)
 rm(stats.race.duration)
 
@@ -318,18 +316,18 @@ won.by = race.stats[, .N, by=S1_Type]
 won.by[, Pct_Won_by := N/n_races_total]
 text.size = 12
 p = ggplot(data=won.by, aes(x=S1_Type, y=Pct_Won_by, fill=S1_Type)) +
-    geom_bar(stat="identity", position=position_dodge(), width = 0.125, show.legend = FALSE) + 
-    theme(legend.position=c(0.5, 0.95),
-          legend.background=element_blank(), 
-          legend.key.size = unit(0.4, "cm"), 
-          legend.text = element_text(size = text.size),
-          axis.text.x = element_text(size = text.size), 
-          axis.text.y = element_text(size = text.size), 
-          axis.title.x = element_text(size = text.size),
-          axis.title.y = element_text(size = text.size)) + 
-    scale_x_discrete(name = "Races Won by") +
-    scale_y_continuous(name = '', labels = percent_format(), limits=c(0,1), breaks=seq(0,1,0.2)) + 
-    scale_fill_manual(values = c('darkgoldenrod2','indianred2')) 
+  geom_bar(stat="identity", position=position_dodge(), width = 0.125, show.legend = FALSE) + 
+  theme(legend.position=c(0.5, 0.95),
+        legend.background=element_blank(), 
+        legend.key.size = unit(0.4, "cm"), 
+        legend.text = element_text(size = text.size),
+        axis.text.x = element_text(size = text.size), 
+        axis.text.y = element_text(size = text.size), 
+        axis.title.x = element_text(size = text.size),
+        axis.title.y = element_text(size = text.size)) + 
+  scale_x_discrete(name = "Races Won by") +
+  scale_y_continuous(name = '', labels = percent_format(), limits=c(0,1), breaks=seq(0,1,0.2)) + 
+  scale_fill_manual(values = c('darkgoldenrod2','indianred2')) 
 ggsave(file = file.path(out.dir, paste(outfile.name, '.pdf', sep = '')), width = 3, height = 4)
 
 ### Figure 4.3 Panel B Analysis by Firm Group
@@ -745,7 +743,7 @@ for (t in c('10us','50us','100us','500us','1ms')) {
   col.nonimproved = get.sensitivity.summary.column(race.stats.nonimproved, symdate.stats, sprintf('nonimproved_%s', t))
   
   cols = cbind(col.stable, col.nonstable[2], col.improved[2], col.nonimproved[2])
-
+  
   tab = rbind(cols,
               c('M_Canc_Within_500us',
                 race.stats.stable[, mean(M_Canc_Within_500us, na.rm=TRUE)],

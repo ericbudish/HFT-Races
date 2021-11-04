@@ -2,7 +2,7 @@
 Monitor_Logs.py
 
 Description:
-This script defines a function MonitorLogs() which tracks the progress of the code 
+This module defines a function MonitorLogs() which tracks the progress of the code 
 by reading the log files, and finds out sym-dates that have and have not been 
 processed. This function is called in the main Python scripts and in
 /PythonCode/log_monitor.py to monitor the progress.
@@ -42,8 +42,8 @@ def MonitorLogs(runtime, pairs, paths):
     all_files = os.listdir(path_logs) 
     whichScript = ''
     for i in all_files:
-        if i[-13:]==runtime:
-            whichScript = i[:-14]
+        if i[-15:]==runtime:
+            whichScript = i[:-16]
             break
     if whichScript == '':
         print('Did not find log files for the specified runtime.')
@@ -77,7 +77,12 @@ def MonitorLogs(runtime, pairs, paths):
                     out['Encounter_Error'] = 'Did not encounter error'
                 else:
                     out['Encounter_Error'] = 'Encounter error'
-             
+
+        # Note: The following 4 blocks are essentially the same. 
+        # Each monitors the log file for one step in the pipeline,
+        # and reports the status and CPU-time spent. 
+
+        # Step 1 Classify Messages
         file_01 = 'Step_1_Classify_Messages_%s_%s_%s.log' % (runtime, date, sym)
         if not os.path.isfile(logpath + file_01):
             out['Status_Classify_Messages'] = 'Does not exist log file'
@@ -95,7 +100,7 @@ def MonitorLogs(runtime, pairs, paths):
                     out['Status_Classify_Messages'] = last
                     out['Time_Classify_Messages'] = None
         
-        # File 02
+        # Step 2 Prepare Order Book
         file_02 = 'Step_2_Prep_Order_Book_%s_%s_%s.log' % (runtime, date, sym)
         if not os.path.isfile(logpath + file_02):
             out['Status_Prepare_Order_Book'] = 'Does not exist log file'
@@ -113,7 +118,7 @@ def MonitorLogs(runtime, pairs, paths):
                     out['Status_Prepare_Order_Book'] = last
                     out['Time_Prepare_Order_Book'] = None
         
-        # File 03
+        # Step 3 Trading and Order Book Stats
         file_03 = 'Step_3_Trading_and_Order_Book_Stats_%s_%s_%s.log' % (runtime, date, sym)
         if not os.path.isfile(logpath + file_03):
             out['Status_Trading_and_Order_Book_Stats'] = 'Does not exist log file'
@@ -131,7 +136,7 @@ def MonitorLogs(runtime, pairs, paths):
                     out['Status_Trading_and_Order_Book_Stats'] = last
                     out['Time_Trading_and_Order_Book_Stats'] = None
 
-        # File 04
+        # Step 4 Race detection and statistics
         file_04 = 'Step_4_Detect_Races_%s_%s_%s.log' % (runtime, date, sym)
         if not os.path.isfile(logpath + file_04):
             out['Status_Race_Detection_Statistics'] = 'Does not exist log file'

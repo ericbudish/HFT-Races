@@ -93,7 +93,7 @@ def calculate_symdate_stats(runtime, date, sym, args, paths):
     #################
     ### PREP DATA ###
     #################
-    msgs, top = PrepData.PrepareData(msgs, top)
+    msgs, top = PrepData.prepare_data(msgs, top)
     
     ## New BBO Inbound counts
     msgs['NBBO_Relevant'] = False

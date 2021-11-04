@@ -1,7 +1,7 @@
 '''
 Validate_Data.py
 
-Data validation functions. Details of the data requirement can be found
+Data validation methods. Details of the data requirement can be found
 in Sections 3 of the Code and Data Appendix. Instructions on data validation
 can be found in Section 5.3 of the Code and Data Appendix.
 

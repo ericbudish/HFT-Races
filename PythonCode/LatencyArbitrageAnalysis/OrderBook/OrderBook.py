@@ -2,19 +2,20 @@
 OrderBook.py
 
 Defines the orderbook object for book updating.
-
-The class object OrderBook represents the state of the order book at a given outbound message. 
-We also use it to fill the top dataframe with the top of book information that is one of the outputs 
-of this script
-
-The OrderBookLvl class is initialized within OrderBook to store the information to update the order
-book level and the depth data structure for a given price/side
 '''
 
 import numpy as np
 
 # Define data structure to represent the order book
 class OrderBook(object):
+    '''
+    The class object OrderBook represents the state of the order book at a given outbound message. 
+    We also use it to fill the top dataframe with the top of book information that is one of the outputs 
+    of this module
+
+    The OrderBookLvl class is initialized within OrderBook to store the information to update the order
+    book level and the depth data structure for a given price/side
+    '''
 
     # Initialization
     def __init__(self, df, top, depth_updates):
@@ -50,12 +51,16 @@ class OrderBook(object):
         return self._depth_updates
 
     def clean_book(self, S):
-        # Remove levels with zero quantity and nan quantity
+        '''
+        Remove levels with zero quantity and nan quantity
+        '''
         self.curr_disp[S] = {k:v for k,v in self.curr_disp[S].items() if v > 0}
         self.curr_total[S] = {k:v for k,v in self.curr_total[S].items() if v > 0}
     
     def calculate_bbo(self, S):
-        # update the bbo on the given side
+        '''
+        update the bbo on the given side
+        '''
         if S == 'Bid':
             self.best_bid = np.array(list(self.curr_disp[S].keys())).max() if len(self.curr_disp[S]) > 0 else np.nan
             self.best_bid_qty = self.curr_disp[S].get(self.best_bid, np.nan)
@@ -68,10 +73,12 @@ class OrderBook(object):
             self.best_ask_h_qty = self.curr_total[S].get(self.best_ask_h, np.nan)
             
     def UpdateBBO(self, k, S, P, qty, qty_h):
-        # Update current BBO
-        # - S is Side, P is PriceLvl for the Event 
-        # - k is the book updating message index for the outbound quote message we loop over
-        # - qty is displayed number of shares and qty_h is total number of shares
+        '''
+        Update current BBO
+        - S is Side, P is PriceLvl for the Event 
+        - k is the book updating message index for the outbound quote message we loop over
+        - qty is displayed number of shares and qty_h is total number of shares
+        '''
         self.curr_disp[S][P] = qty
         self.curr_total[S][P] = qty_h
         self.clean_book(S)
@@ -95,12 +102,14 @@ class OrderBook(object):
         self._top.at[k, 'BestAskQty_h'] = self.best_ask_h_qty
 
     def UpdateLvl(self, S, P, k, j):
-        # Create/updating an order book level using the OrderBookLvl Class 
-        # - S is Side, P is PriceLvl for the Event's first message
-        # - j is the book updating message index for a given party in the trade (1 or 2)
-        #   or the non-trade outbound message
-        # - k is the book updating message index for the outbound quote message we loop over
-        # - j and k are equal in cases where j is for the index for the first message 
+        '''
+        Create/updating an order book level using the OrderBookLvl Class 
+        - S is Side, P is PriceLvl for the Event's first message
+        - j is the book updating message index for a given party in the trade (1 or 2)
+          or the non-trade outbound message
+        - k is the book updating message index for the outbound quote message we loop over
+        - j and k are equal in cases where j is for the index for the first message 
+        '''
         df = self._df
         if (S, P) not in self.lvls.keys():
             self.lvls[(S, P)] = OrderBookLvl(S, P)
@@ -113,10 +122,12 @@ class OrderBook(object):
         self.UpdateBBO(k, booklevel.S, booklevel.P, booklevel.curr_depth, booklevel.curr_depth_h)
 
     def UpdatePrevLvl(self, S, P, k, j):
-        # Cancels a given order in the (S, P) level 
-        # same variables as update
-        # Removes a given order from the depth structure and 
-        # updates the book without that order        
+        '''
+        Cancels a given order in the (S, P) level 
+        same variables as update
+        Removes a given order from the depth structure and 
+        updates the book without that order    
+        '''    
         df = self._df
         if (S, P) not in self.lvls.keys():
             self.lvls[(S, P)] = OrderBookLvl(S, P)
@@ -156,7 +167,7 @@ class OrderBook(object):
                     self.UpdateKillLvl(correct_side, plvl, k)
 
     def UpdateKillLvl(self, S, P, k):
-        # Kill the entire Level (set all depth and volume to empty/-99)
+        # Kill the entire Level (set all depth and volume to empty)
         if (S, P) not in self.lvls.keys():
             self.lvls[(S, P)] = OrderBookLvl(S, P)
         booklevel = self.lvls[(S, P)]

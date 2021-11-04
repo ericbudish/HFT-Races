@@ -8,12 +8,10 @@
 #' 
 #' Dependency: R (>=4.0.0)
 #' 
-#' Required packages: Required packages are listed in the 
-#' "LOAD PACKAGES" section below. Please use the following command to 
-#' install all the required packages:
-#' 
-#'    install.packages(c('data.table','R.utils','stargazer',
-#'    'Hmisc','ggridges','ggplot2','scales','dplyr','reshape2'))
+#' Required packages: The following required packages will be installed 
+#' automatically when running the R code:
+#'    'data.table','R.utils','stargazer',
+#'    'Hmisc','ggridges','ggplot2','scales','dplyr','reshape2'
 #' 
 #' To generate a sensitivity table,
 #' Step 1. Run the Python code following Sections 4-7 of the Code and Data 

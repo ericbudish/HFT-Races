@@ -1,7 +1,9 @@
 '''
 Classify_Messages.py
 
-This script classifies the messages into meaningful economic events.
+This module classifies the messages into meaningful economic events.
+Please see Section 10.1 of the Code and Data Appendix, as well as the
+docstring for classify_messages() for implementation details.
 
 Reference:
     Section 10.1 of the Code and Data Appendix.
@@ -12,41 +14,6 @@ Input:
 
 Output: 
     Message data, with inbounds and outbounds grouped into economic events.
-    Specifically, the output file is also a dataframe of messages with 
-    the following fields added.
-        1. UnifiedMessageType: A type description assigned to each message that 
-            combines all the different type information variables into one. 
-            This field is created to reduce the number of type variables 
-            and improve readability.
-        2. Event/EventNum: The economic event assigned based on the combination 
-            of matching engine (outbound) and gateway (inbound) messages 
-            (e.g. 'New order accepted'). Event is populated for the first message 
-            of each event and EventNum for all messages. Event/EventNum are assigned
-            within each order (i.e. messages with the same UniqueOrderID) for a user. 
-            Note that for quote-related events, the variable names are 
-            BidEvent/AskEvent, BidEventNum/AskEventNum.
-        3. PriceLvl: The program assigns prices to outbound messages with the most 
-            recent inbound message price under the same UniqueOrderID. This is
-            because outbound messages do not have price information of the original 
-            order. For events where an order is executed at multiple price levels, 
-            the program also populates the min/max execution prices for the first 
-            message in the event.
-
-Steps:
-    1. Add UnifiedMessageType. Combine multiple fields with message type information 
-        into a single field. 
-        E.g. A message with MessageType 'New_Order', OrderType 'Limit', TIF 'GoodTill'
-        is assigned a UnifiedMessageType 'Gateway New Order (Limit)'.
-    2. Classify messages into Events. For each user and order, assign Event, 
-        EventNum and PriceLvl by looping over messages and considering the 
-        UnifiedMessageType.
-        E.g. A message with UnifiedMessageType 'Gateway New Order (Limit)'
-        followed by the message 'ME: Full Fill (A)' will be assigned the
-        Event 'New order aggressively executed in Full.' Both messages
-        will be assigned the same EventNum. The price level from the
-        new order message will be assigned to the matching engine fill
-        as the PriceLvl variable.
-
 '''
 ######################################################################################################################################
 import pandas as pd
@@ -65,7 +32,17 @@ def opposite(S):
 
 def classify_messages(runtime, date, sym, args, paths):
     '''
-    Function to classify message and events. 
+    Function to classify messages into meaningful economic events.
+    
+    User note: this is a particularly long function because it goes through all
+    of the different kinds of inbound and outbound messages recognized by this package.
+    A complete list of the recognized message types is as follows:
+        Inbounds: New_Order, New_Quote, Cancel_Request, Cancel_Replace_Request, Other_Inbound.
+        Outbounds: Execution_Report, Cancel_Reject, Other_Reject, Other_Outbound.
+    This creates some redundancy in the code. We may break this function into several 
+    smaller subfunctions in future versions of the code.
+
+    Please refer to Section 10.1 of the Code and Data Appendix.
     
     Params:
         runtime: str, for log purpose.
@@ -79,8 +56,33 @@ def classify_messages(runtime, date, sym, args, paths):
                      - path_data: path to pre-processed message data files.
                      - path_temp: path to temp data files.
                      - path_logs: path to log files.
+
     Output:
-        message dataset with the following columns added, saved to path_temp/ClassifiedMsgData/.
+        Message data, with inbounds and outbounds grouped into economic events.
+        Specifically, the output file is also a dataframe of messages with 
+        the following fields added, saved to path_temp/ClassifiedMsgData/.
+            
+            1. UnifiedMessageType: A type description assigned to each message that 
+                combines all the different type information variables into one. 
+                This field is created to reduce the number of type variables 
+                and improve readability.
+            
+            2. Event/EventNum: The economic event assigned based on the combination 
+                of matching engine (outbound) and gateway (inbound) messages 
+                (e.g. 'New order accepted'). Event is populated for the first message 
+                of each event and EventNum for all messages. Event/EventNum are assigned
+                within each order (i.e. messages with the same UniqueOrderID) for a user. 
+                Note that for quote-related events, the variable names are 
+                BidEvent/AskEvent, BidEventNum/AskEventNum.
+            
+            3. PriceLvl: The program assigns prices to outbound messages with the most 
+                recent inbound message price under the same UniqueOrderID. This is
+                because outbound messages do not have price information of the original 
+                order. For events where an order is executed at multiple price levels, 
+                the program also populates the min/max execution prices for the first 
+                message in the event.
+        
+        The additional fields and their data types are as follows
             {'UnifiedMessageType': 'O',
             'Categorized': 'bool', 'EventNum': 'float64', 'Event': 'O', 
             'PrevPriceLvl': 'int64', 'PrevQty': 'float64', 'PriceLvl': 'int64', 
@@ -91,6 +93,21 @@ def classify_messages(runtime, date, sym, args, paths):
             'AskCategorized': 'bool', 'AskEventNum': 'float64', 'AskEvent': 'O',
             'PrevAskPriceLvl': 'int64', 'PrevAskQty': 'float64', 'AskPriceLvl': 'int64', 
             'AskMinExecPriceLvl':'int64', 'AskMaxExecPriceLvl':'int64'}
+            
+    Steps:
+        1. Add UnifiedMessageType. Combine multiple fields with message type information 
+            into a single field. 
+            E.g. A message with MessageType 'New_Order', OrderType 'Limit', TIF 'GoodTill'
+            is assigned a UnifiedMessageType 'Gateway New Order (Limit)'.
+        2. Classify messages into Events. For each user and order, assign Event, 
+            EventNum and PriceLvl by looping over messages and considering the 
+            UnifiedMessageType.
+            E.g. A message with UnifiedMessageType 'Gateway New Order (Limit)'
+            followed by the message 'ME: Full Fill (A)' will be assigned the
+            Event 'New order aggressively executed in Full.' Both messages
+            will be assigned the same EventNum. The price level from the
+            new order message will be assigned to the matching engine fill
+            as the PriceLvl variable.
     '''
     # Initialize log
     logpath = '%s/%s/' %(paths['path_logs'], 'MessageDataProcessing_'+runtime)
@@ -245,14 +262,15 @@ def classify_messages(runtime, date, sym, args, paths):
     # to the order type.
     # Please note that 'Gateway New Order (IOC)' includes both IOCs and FOKs.
     # We will use the TIF field to separate IOC and FOK orders later in the code.
-    msgs.loc[(msgs['MessageType'] == 'New_Order'), 'UnifiedMessageType'] = 'Gateway New Order (Other)'
-    msgs.loc[(msgs['MessageType'] == 'New_Order') & (msgs['OrderType'] == 'Market'), 'UnifiedMessageType'] = 'Gateway New Order (Market)'
-    msgs.loc[(msgs['MessageType'] == 'New_Order') & (msgs['OrderType'] == 'Limit') & (msgs['TIF'] == 'GoodTill'), 'UnifiedMessageType'] = 'Gateway New Order (Limit)'
-    msgs.loc[(msgs['MessageType'] == 'New_Order') & (msgs['OrderType'] == 'Limit') & (msgs['TIF'].isin({'IOC','FOK'})), 'UnifiedMessageType'] = 'Gateway New Order (IOC)'
-    msgs.loc[(msgs['MessageType'] == 'New_Order') & (msgs['OrderType'] == 'Stop'), 'UnifiedMessageType'] = 'Gateway New Order (Stop)'
-    msgs.loc[(msgs['MessageType'] == 'New_Order') & (msgs['OrderType'] == 'Stop_Limit'), 'UnifiedMessageType'] = 'Gateway New Order (Stop Limit)'
-    msgs.loc[(msgs['MessageType'] == 'New_Order') & (msgs['OrderType'] == 'Pegged'), 'UnifiedMessageType'] = 'Gateway New Order (Pegged)'
-    msgs.loc[(msgs['MessageType'] == 'New_Order') & (msgs['OrderType'] == 'Passive_Only'), 'UnifiedMessageType'] = 'Gateway New Order (Passive Only)'
+    new_orders = msgs['MessageType'] == 'New_Order'
+    msgs.loc[(new_orders), 'UnifiedMessageType'] = 'Gateway New Order (Other)'
+    msgs.loc[(new_orders) & (msgs['OrderType'] == 'Market'), 'UnifiedMessageType'] = 'Gateway New Order (Market)'
+    msgs.loc[(new_orders) & (msgs['OrderType'] == 'Limit') & (msgs['TIF'] == 'GoodTill'), 'UnifiedMessageType'] = 'Gateway New Order (Limit)'
+    msgs.loc[(new_orders) & (msgs['OrderType'] == 'Limit') & (msgs['TIF'].isin({'IOC','FOK'})), 'UnifiedMessageType'] = 'Gateway New Order (IOC)'
+    msgs.loc[(new_orders) & (msgs['OrderType'] == 'Stop'), 'UnifiedMessageType'] = 'Gateway New Order (Stop)'
+    msgs.loc[(new_orders) & (msgs['OrderType'] == 'Stop_Limit'), 'UnifiedMessageType'] = 'Gateway New Order (Stop Limit)'
+    msgs.loc[(new_orders) & (msgs['OrderType'] == 'Pegged'), 'UnifiedMessageType'] = 'Gateway New Order (Pegged)'
+    msgs.loc[(new_orders) & (msgs['OrderType'] == 'Passive_Only'), 'UnifiedMessageType'] = 'Gateway New Order (Passive Only)'
     ## New_Quote messages
     msgs.loc[(msgs['MessageType'] == 'New_Quote'), 'UnifiedMessageType'] = 'Gateway New Quote'
     ## Cancel messages 
@@ -264,25 +282,30 @@ def classify_messages(runtime, date, sym, args, paths):
     ### Create Unified Message Type variable for Matching Engine messages (outbound)
     ## Execution_Report
     # Set Unified Message Type for all Execution_Report to Other and then update Type according to other variables
-    msgs.loc[(msgs['MessageType'] == 'Execution_Report'), 'UnifiedMessageType'] = 'ME: Execution Report (Other)'
+    execution_reports = msgs['MessageType'] == 'Execution_Report'
+    msgs.loc[(execution_reports), 'UnifiedMessageType'] = 'ME: Execution Report (Other)'
     # Non-fill Execution_Report
-    msgs.loc[(msgs['MessageType'] == 'Execution_Report') & (msgs['ExecType'] == 'Order_Expired'), 'UnifiedMessageType'] = 'ME: Order Expire'
-    msgs.loc[(msgs['MessageType'] == 'Execution_Report') & (msgs['ExecType'] == 'Order_Cancelled'), 'UnifiedMessageType'] = 'ME: Cancel Accept'
-    msgs.loc[(msgs['MessageType'] == 'Execution_Report') & (msgs['ExecType'] == 'Order_Replaced'), 'UnifiedMessageType'] = 'ME: Cancel/Replace Accept'
-    msgs.loc[(msgs['MessageType'] == 'Execution_Report') & (msgs['ExecType'] == 'Order_Suspended'), 'UnifiedMessageType'] = 'ME: Order Suspend'
-    msgs.loc[(msgs['MessageType'] == 'Execution_Report') & (msgs['ExecType'] == 'Order_Restated'), 'UnifiedMessageType'] = 'ME: Order Restated'
-    msgs.loc[(msgs['MessageType'] == 'Execution_Report') & (msgs['ExecType'] == 'Order_Accepted'), 'UnifiedMessageType'] = 'ME: New Order Accept'
-    msgs.loc[(msgs['MessageType'] == 'Execution_Report') & (msgs['ExecType'] == 'Order_Rejected'), 'UnifiedMessageType'] = 'ME: Order Reject'
+    msgs.loc[(execution_reports) & (msgs['ExecType'] == 'Order_Expired'), 'UnifiedMessageType'] = 'ME: Order Expire'
+    msgs.loc[(execution_reports) & (msgs['ExecType'] == 'Order_Cancelled'), 'UnifiedMessageType'] = 'ME: Cancel Accept'
+    msgs.loc[(execution_reports) & (msgs['ExecType'] == 'Order_Replaced'), 'UnifiedMessageType'] = 'ME: Cancel/Replace Accept'
+    msgs.loc[(execution_reports) & (msgs['ExecType'] == 'Order_Suspended'), 'UnifiedMessageType'] = 'ME: Order Suspend'
+    msgs.loc[(execution_reports) & (msgs['ExecType'] == 'Order_Restated'), 'UnifiedMessageType'] = 'ME: Order Restated'
+    msgs.loc[(execution_reports) & (msgs['ExecType'] == 'Order_Accepted'), 'UnifiedMessageType'] = 'ME: New Order Accept'
+    msgs.loc[(execution_reports) & (msgs['ExecType'] == 'Order_Rejected'), 'UnifiedMessageType'] = 'ME: Order Reject'
     # Fill Execution_Report
-    msgs.loc[(msgs['MessageType'] == 'Execution_Report') & (msgs['ExecType'] == 'Order_Executed') & (msgs['OrderStatus'] == 'Partial_Fill'), 'UnifiedMessageType'] = 'ME: Partial Fill (Other)'
-    msgs.loc[(msgs['MessageType'] == 'Execution_Report') & (msgs['ExecType'] == 'Order_Executed') & (msgs['OrderStatus'] == 'Partial_Fill') & (msgs['TradeInitiator'] == 'Passive'), 'UnifiedMessageType'] = 'ME: Partial Fill (P)'
-    msgs.loc[(msgs['MessageType'] == 'Execution_Report') & (msgs['ExecType'] == 'Order_Executed') & (msgs['OrderStatus'] == 'Partial_Fill') & (msgs['TradeInitiator'] == 'Aggressive'), 'UnifiedMessageType'] = 'ME: Partial Fill (A)'
-    msgs.loc[(msgs['MessageType'] == 'Execution_Report') & (msgs['ExecType'] == 'Order_Executed') & (msgs['OrderStatus'] == 'Full_Fill'), 'UnifiedMessageType'] = 'ME: Full Fill (Other)'
-    msgs.loc[(msgs['MessageType'] == 'Execution_Report') & (msgs['ExecType'] == 'Order_Executed') & (msgs['OrderStatus'] == 'Full_Fill') & (msgs['TradeInitiator'] == 'Passive'), 'UnifiedMessageType'] = 'ME: Full Fill (P)'
-    msgs.loc[(msgs['MessageType'] == 'Execution_Report') & (msgs['ExecType'] == 'Order_Executed') & (msgs['OrderStatus'] == 'Full_Fill') & (msgs['TradeInitiator'] == 'Aggressive'), 'UnifiedMessageType'] = 'ME: Full Fill (A)'
+    order_executed = msgs['ExecType'] == 'Order_Executed'
+    partial_fills = msgs['OrderStatus'] == 'Partial_Fill'
+    full_fills = msgs['OrderStatus'] == 'Full_Fill'
+    msgs.loc[(execution_reports) & (order_executed) & (partial_fills), 'UnifiedMessageType'] = 'ME: Partial Fill (Other)'
+    msgs.loc[(execution_reports) & (order_executed) & (partial_fills) & (msgs['TradeInitiator'] == 'Passive'), 'UnifiedMessageType'] = 'ME: Partial Fill (P)'
+    msgs.loc[(execution_reports) & (order_executed) & (partial_fills) & (msgs['TradeInitiator'] == 'Aggressive'), 'UnifiedMessageType'] = 'ME: Partial Fill (A)'
+    msgs.loc[(execution_reports) & (order_executed) & (full_fills), 'UnifiedMessageType'] = 'ME: Full Fill (Other)'
+    msgs.loc[(execution_reports) & (order_executed) & (full_fills) & (msgs['TradeInitiator'] == 'Passive'), 'UnifiedMessageType'] = 'ME: Full Fill (P)'
+    msgs.loc[(execution_reports) & (order_executed) & (full_fills) & (msgs['TradeInitiator'] == 'Aggressive'), 'UnifiedMessageType'] = 'ME: Full Fill (A)'
     ## Cancel_Reject
-    msgs.loc[(msgs['MessageType'] == 'Cancel_Reject'), 'UnifiedMessageType'] = 'ME: Cancel Reject (Other)'
-    msgs.loc[(msgs['MessageType'] == 'Cancel_Reject') & (msgs['CancelRejectReason'] == 'TLTC'), 'UnifiedMessageType'] = 'ME: Cancel Reject (TLTC)'
+    cancel_rejects = msgs['MessageType'] == 'Cancel_Reject'
+    msgs.loc[(cancel_rejects), 'UnifiedMessageType'] = 'ME: Cancel Reject (Other)'
+    msgs.loc[(cancel_rejects) & (msgs['CancelRejectReason'] == 'TLTC'), 'UnifiedMessageType'] = 'ME: Cancel Reject (TLTC)'
     ## Other reject 
     # In the LSE dataset, this includes protocol reject and business reject cancel for cancel requests or new orders/quotes
     msgs.loc[(msgs['MessageType'] == 'Other_Reject'), 'UnifiedMessageType'] = 'ME: Other Reject'
@@ -459,20 +482,19 @@ def classify_messages(runtime, date, sym, args, paths):
                 # GFA orders will not update the order book or participate in races.
                 if order_msgs.at[i, 'MessageType'] == 'New_Order':
                     counter += 1  # Increment event counter
+                    order = Order()
                     # Handle order types with price information
                     if msgs.at[i, 'UnifiedMessageType'] in ('Gateway New Order (Limit)', 
                                                           'Gateway New Order (IOC)',  
                                                           'Gateway New Order (Stop Limit)',
                                                           'Gateway New Order (Passive Only)',
                                                           'Gateway New Order (Other)'):
-                        order = Order()
                         order.add(p=msgs.at[i, 'LimitPrice'], q=msgs.at[i, 'OrderQty'])
                     # Handle order types without price information. This includes
                     # 'Gateway New Order (Market)', 'Gateway New Order (Stop)', 'Gateway New Order (Pegged)'
                     # They are separated because they don't have a limit price and they 
                     # participate in the trading in a slightly different way.
                     else: 
-                        order = Order()
                         order.add(p=np.nan, q=msgs.at[i, 'OrderQty'])
                     
                     msgs.at[i, 'EventNum'] = counter  # Populate EventNum

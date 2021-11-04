@@ -1,10 +1,10 @@
 '''
-This script contains functions to determine the race message outcomes
+This module contains functions to determine the race message outcomes
 '''
 
 import pandas as pd
 
-def GetTakeOutcome(S, P_Signed, msg, strict_fail):
+def get_take_outcome(S, P_Signed, msg, strict_fail):
     '''
     This function inputs a message and returns whether it is a successful take message in race at price P and side S
     This function uses RaceRlvtOutcome and checks whether the Take was successful at the race price level or better 
@@ -49,7 +49,7 @@ def GetTakeOutcome(S, P_Signed, msg, strict_fail):
         else:
             return 'Unknown'
 
-def GetOutcome(S, P_Signed, subset_msgs, strict_fail):
+def get_msg_outcome(S, P_Signed, subset_msgs, strict_fail):
     '''
     This function inputs a set of messages and returns whether those messages are 
     successful/failed Take or Cancel given a race at price P and side S.
@@ -68,5 +68,5 @@ def GetOutcome(S, P_Signed, subset_msgs, strict_fail):
         if subset_msgs.at[i, '%sRaceRlvtType' % S] == 'Cancel Attempt':
             outcome.at[i] = subset_msgs.at[i, '%sRaceRlvtOutcomeGroup' % S]
         else: 
-            outcome.at[i] = GetTakeOutcome(S, P_Signed, subset_msgs.loc[i], strict_fail)
+            outcome.at[i] = get_take_outcome(S, P_Signed, subset_msgs.loc[i], strict_fail)
     return (outcome)

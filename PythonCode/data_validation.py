@@ -2,8 +2,8 @@
 data_validation.py
 
 This script checks whether the pre-processed data meets the requirements of 
-the package. We strongly recommend users to validate the pre-processed 
-data before applying the package.
+the package. We strongly recommend users validate the pre-processed data before 
+applying the package.
 
 Reference: 
 Code and Data Appendix for “Quantifying the High-Frequency Trading
@@ -25,6 +25,10 @@ path_data = '/path/to/pre-processed/RawData/'
 # testing_pairs - list of (date, sym) pairs to be checked
 # Each item in the list is a python 2-tuple: e.g., 
 # [('2000-01-01', 'ABCD'), ('2000-01-01', 'EFGH')].
+# You can first obtain all symbol-date pairs and then 
+# choose to validate all or a subset of symbol-dates:
+# pairs = pd.read_csv(file_symdates, dtype={'Date':'O','Symbol':'O'})[['Date','Symbol']].dropna().to_records(index=False).tolist()
+# testing_pairs = # All or a subset of pairs
 testing_pairs = [('2000-01-01','ABCD')] 
 ###################################################################################
 ### Data Validation

@@ -1,15 +1,16 @@
 '''
 preprocessing_example.py
 
-This script is an example of pre-processing message data before applying the python code. 
-Please refer to Section 3 of the Code and Data Appendix. For the meaning of the values of each 
-column in the LSE message data, please refer to "London Stock Exchange MIT201 - Guide to the Trading System Issue 12.3"
+This script is an example of pre-processing message data before applying the 
+python code. Please refer to Section 3 of the Code and Data Appendix. For the 
+meaning of the values of each column in the LSE message data, please refer to 
+"London Stock Exchange MIT201 - Guide to the Trading System Issue 12.3"
 (https://web.archive.org/web/20150703141903/https://www.londonstockexchange.com/products-and-services/trading-services/guide-to-new-trading-system.pdf)
 
-Note that this script may not be directly used by researchers using message data from other 
-exchanges or from LSE but during a different time period, as LSE makes changes to the trading protocol
-from time to time. We provide this script as an example and hope it can help the users of our 
-code pre-process their message data.
+Note that this script may not be directly used by researchers using message data 
+from other exchanges or from LSE but during a different time period, as LSE makes 
+changes to the trading protocol from time to time. We provide this script as an 
+example and hope it can help the users of our code pre-process their message data.
 
 '''
 import pandas as pd

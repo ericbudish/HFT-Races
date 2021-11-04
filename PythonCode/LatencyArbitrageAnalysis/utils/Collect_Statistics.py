@@ -4,13 +4,13 @@ Collect_Statistics.py
 Description: 
 The package processes each symbol-date in parallel. When the program produces output statistics, 
 it first generates a stats file for each symbol-date. Then, the main Python scripts call the 
-function CollectStats in this script to combine the symbol-date level files to an aggregate csv.gz file 
-and output to the /Outout folder. 
+function collect_stats in this module to combine the symbol-date level files to an aggregate csv.gz file 
+and output to the /Output folder. 
 '''
 import os
 import pandas as pd
 
-def CollectStats(runtime, paths, pairs, collect):
+def collect_stats(runtime, paths, pairs, collect):
     '''
     This function combines the stats files for each sym-date in the /Temp folder to an aggregate csv file
     and output to the /Output folder

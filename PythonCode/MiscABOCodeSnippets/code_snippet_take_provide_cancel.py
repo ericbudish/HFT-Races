@@ -45,6 +45,8 @@ import logging
 from ast import literal_eval
 import random
 import os
+from LatencyArbitrageAnalysis.utils.Dtypes import dtypes_msgs, dtypes_top
+from LatencyArbitrageAnalysis.RaceDetection.Race_Msg_Outcome import get_msg_outcome
 warnings.filterwarnings("ignore")
 PrepData = importlib.import_module('04a_Prep_Race_Data')
 
@@ -79,7 +81,7 @@ def decompose_active_qty(race, msgs, top_15, me):
     race_ID = race['SingleLvlRaceID']
     S = race['S']
     P_Signed = race['P']
-    race_msgs[f'{S}RaceRlvtMsgOutcome'] = GetOutcome(S, P_Signed, race_msgs, False) # Strict fail = False
+    race_msgs[f'{S}RaceRlvtMsgOutcome'] = get_msg_outcome(S, P_Signed, race_msgs, False) # Strict fail = False
     Sign = 1 * (S == 'Ask') - 1 * (S == 'Bid')
     price_factor = int(1e8)
     P = Sign * P_Signed
@@ -193,46 +195,6 @@ def process_sym_date(symdate):
         infile_race_records = '/data/proc/output/race_stats/%s/%s/Race_Recs_%s_%s.pkl' % ('daily_500us', date, date, sym)
     
         price_factor = int(1e8)
-    
-        dtypes_msgs = {
-            'ClientOrderID':'O', 'UniqueOrderID':'O', 'TradeMatchID': 'O', 
-            'UserID':'O', 'FirmID':'O', 'Session_ID':'float64',
-            'MessageTimestamp':'O', 'MessageType':'O', 'OrderType':'O',
-            'ExecType':'O', 'OrderStatus':'O', 'TradeStatus':'O', 
-            'TIF':'O', 'CancelRejectReason': 'O',
-            'Side':'O', 'OrderQty':'float64', 'DisplayQty':'float64', 
-            'LimitPrice':'float64', 'StoppedPrice':'float64',
-            'ExecutedPrice': 'float64', 'ExecutedQty': 'float64', 'LeavesQty': 'float64',
-            'QuoteRelated':'bool',
-            'BidPrice':'float64', 'BidSize':'float64', 
-            'AskPrice':'float64', 'AskSize':'float64',
-            'RegularHour':'bool','OpenAuctionTrade':'bool', 'AuctionTrade':'bool',
-            'BBO': 'bool',
-            'UnifiedMessageType': 'O',
-            'PrevPriceLvl': 'float64', 'PrevQty': 'float64', 'PriceLvl': 'float64', 
-            'Categorized': 'bool', 'EventNum': 'float64', 'Event': 'O', 
-            'MinExecPriceLvl':'float64', 'MaxExecPriceLvl':'float64', 
-            'PrevBidPriceLvl': 'float64', 'PrevBidQty': 'float64', 'BidPriceLvl': 'float64', 
-            'BidCategorized': 'bool', 'BidEventNum': 'float64', 'BidEvent': 'O', 
-            'BidMinExecPriceLvl':'float64', 'BidMaxExecPriceLvl':'float64', 
-            'PrevAskPriceLvl': 'float64', 'PrevAskQty': 'float64', 'AskPriceLvl': 'float64', 
-            'AskCategorized': 'bool', 'AskEventNum': 'float64', 'AskEvent': 'O',
-            'AskMinExecPriceLvl':'float64', 'AskMaxExecPriceLvl':'float64','FirmNum':'float64'}
-        dtypes_top = {
-            'MessageTimestamp': 'O', 'Side': 'O','UnifiedMessageType': 'O',
-            'RegularHour':'bool','OpenAuctionTrade':'bool','AuctionTrade':'bool',
-            'BestBid': 'float64','BestBidQty': 'float64', 'BestAsk': 'float64','BestAskQty': 'float64', 
-            'Spread': 'float64','MidPt': 'float64', 
-            'last_BestBid': 'float64', 'last_BestAsk': 'float64','last_MidPt': 'float64', 
-            't_last_chg_BestBid': 'O', 't_last_chg_BestAsk': 'O','t_last_chg_MidPt': 'O',
-            'Corrections_OrderAccept': 'float64','Corrections_Trade': 'float64',  
-            'Corrections_BBO': 'float64','Corrections_notA': 'float64', 
-            'Corrections_OrderAccept_h': 'float64','Corrections_Trade_h': 'float64',  
-            'Corrections_BBO_h': 'float64','Corrections_notA_h': 'float64', 
-            'DepthKilled': 'float64', 'DepthKilled_h': 'float64', 
-            'BestBid_TickSize': 'float64', 'BestAsk_TickSize': 'float64','Diff_TickSize': 'O',
-            'Trade_Pos': 'O', 'BookUpdateParentMsgID': 'float64'}
-        
         # This rank is from the firm dynamics analysis in the paper. 
         # Firms are sorted based on the proportion of races won in the whole sample
         top_15 = [41,7,19,24,32,43,4,27,11,45,127,26,39,12,6] 
@@ -266,7 +228,7 @@ def process_sym_date(symdate):
         post_open_auction = msgs.PostOpenAuction
         msgs, top = msgs.loc[post_open_auction & reg_hours], top.loc[post_open_auction & reg_hours]
         
-        msgs, top = PrepData.PrepareData(msgs, top, ticktable, price_factor, sess_id)
+        msgs, top = PrepData.prepare_data(msgs, top, ticktable, price_factor, sess_id)
         msgs['TradePos'] = top['TradePos']
         me_cols = ['UniqueOrderID', 'EventNum', 'MessageType', 'ExecType', 'UnifiedMessageType', 
                     'LeavesQty', 'ExecutedPrice', 'ExecutedQty', 'TradeMatchID', 'TradePos', 'FirmNum']
@@ -287,74 +249,6 @@ def process_sym_date(symdate):
     except:
         logger.critical('Critical Error: '+str(symdate))
         return None
-
-def GetTakeOutcome(S, P_Signed, msg, strict_fail):
-    '''
-    This function inputs a message and returns whether it is a successful take message in race at price P and side S
-    This function uses RaceRlvtOutcome and checks whether the Take was successful at the race price level or better 
-    (for the taker). If strict_fail is True then, only expired IOCs are considered fails.
-    
-    Param:
-        S: side 
-        P_Signed: signed price 
-        msg: pd.Series containing message of interest 
-        strict_fail: If strict is True then, only expired IOCs are considered fails.
-    
-    Return: String representing the outcome of the take message
-    Please note that 'In: New Order (IOC)' includes both IOC and FOK,
-    we use TIF to exclude FOK orders.
-    '''
-    outcome = msg['%sRaceRlvtOutcomeGroup' % S]
-    exec_pr = msg['%sRaceRlvtBestExecPriceLvlSigned' % S]
-    msg_type = msg['UnifiedMessageType']
-    msg_tif = msg['TIF']
-    
-    if strict_fail == True:
-        if outcome == 'Fail':
-            if (msg_type == 'Gateway New Order (IOC)') & (msg_tif == '3'):
-                return 'Fail'
-            else:
-                return 'Unknown'
-        elif outcome == 'Race Price Dependent':
-            if exec_pr <= P_Signed:
-                return 'Success'
-            else:
-                return 'Unknown'
-        else:
-            return 'Unknown'
-    else:
-        if outcome == 'Fail':
-            return 'Fail'
-        elif outcome == 'Race Price Dependent':
-            if exec_pr <= P_Signed:
-                return 'Success'
-            else:
-                return 'Fail'
-        else:
-            return 'Unknown'
-
-def GetOutcome(S, P_Signed, subset_msgs, strict_fail):
-    '''
-    This function inputs a set of messages and returns whether those messages are 
-    successful/failed Take or Cancel given a race at price P and side S.
-    
-    Param:
-        S: side 
-        P_Signed: signed price 
-        subset_msgs: pd.DataFrame containing messages of interest 
-        strict_fail: If strict is True, then only expired IOCs are considered fails.
-        
-    Return:
-        outcome: pd.Series of strings representing outcomes 
-    '''
-    outcome = pd.Series('Unknown', index=subset_msgs.index)
-    for i in subset_msgs.index:
-        if subset_msgs.at[i, '%sRaceRlvtType' % S] == 'Cancel Attempt':
-            outcome.at[i] = subset_msgs.at[i, '%sRaceRlvtOutcomeGroup' % S]
-        else: 
-            outcome.at[i] = GetTakeOutcome(S, P_Signed, subset_msgs.loc[i], strict_fail)
-    return (outcome)
-    
     
 if __name__ == "__main__":
     out_dir = '/data/proc/data_analysis/active_qty_decompose/output/DecomposeActiveQty.csv.gz'

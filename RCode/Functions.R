@@ -8,24 +8,18 @@
 #' Dependency: R (>=4.0.0)
 #' 
 #' Required packages: Required packages are listed in the 
-#' "LOAD PACKAGES" section below. Please use the following command to 
-#' install all the required packages:
-#' 
-#'    install.packages(c('data.table','R.utils','stargazer',
-#'    'Hmisc','ggridges','ggplot2','scales','dplyr','reshape2'))
+#' "LOAD PACKAGES" section below. They will be installed automatically
+#' when running the R code.
 #' 
 ########################################################################
 ########################### LOAD PACKAGES ##############################
 ########################################################################
-require('data.table')
-require('R.utils')
-require('stargazer')
-require('Hmisc')
-require('ggridges')
-require('ggplot2')
-require('scales')
-require('dplyr')
-require('reshape2')
+pkgs = c('data.table','R.utils','stargazer','Hmisc','ggridges','ggplot2',
+         'scales','dplyr','reshape2')
+for (pkg in pkgs) {
+  if (!require(pkg, character.only = TRUE)) {install.packages(pkg, character.only = TRUE)}
+  library(pkg, character.only = TRUE)
+}
 ########################################################################
 ########################### SET CONSTANTS ##############################
 ########################################################################
@@ -65,14 +59,14 @@ generate.symdate = function(race.stats, symdate.stats, t) {
   Race_Profits_PerShare_Tx = sprintf('Race_Profits_PerShare_Tx_%s',t)
   Race_Profits_ActiveQty = sprintf('Race_Profits_ActiveQty_%s',t)
   LossAvoidance = sprintf('LossAvoidance_%s',t)
-
+  
   ### Flag races for PI and ES calculation
   # A race is flagged if the midpoint price at the race start or at T after that
   # is missing or ES <= 0 (due to packet loss or one sided market).
   # We only use non-flagged races to calculate PI and ES bps in races below.
   MidPt_f_T = sprintf('MidPt_f_%s', t)
   race.stats[, FlaggedRace:= is.na(MidPt) | is.na(get(MidPt_f_T)) | Eff_Spread_PerShare_Race<=0]
-
+  
   ### Get the stats requiring race stats input (and possibly also symdate stats input)
   # Only include fields that should be zero when there is no race for a symdate
   race.stats = merge(race.stats, symdate.stats, by = c('Date', 'Symbol'), all.x = TRUE)
@@ -132,14 +126,14 @@ generate.symdate = function(race.stats, symdate.stats, t) {
   symdate = symdate[, Realized_Spread_NotRaces_bps := Eff_Spread_NotRaces_bps - PriceImpact_NotRaces_bps]
   ## Spread decomposition
   symdate = symdate[, `:=`(
-                      PI_ES = to_pct * (PriceImpact_Paid / Eff_Spread_Paid),
-                      PI_R_PI_Total = to_pct * PriceImpact_Paid_Races / PriceImpact_Paid,
-                      PI_R_ES = to_pct * PriceImpact_Paid_Races / Eff_Spread_Paid,
-                      PI_NotR_ES_NotR = to_pct * PriceImpact_Paid_NotRaces/Eff_Spread_Paid_NotRaces,
-                      RaceProfits_DD_ES = to_pct * Race_Profits_DispDepth / Eff_Spread_Paid,
-                      RaceProfits_DD_ES_NotR = to_pct * Race_Profits_DispDepth / Eff_Spread_Paid_NotRaces,
-                      RaceProfits_Active_ES = to_pct * Race_Profits_ActiveQty / Eff_Spread_Paid,
-                      LossA_ES = to_pct * LossAvoidance / Eff_Spread_Paid)]
+    PI_ES = to_pct * (PriceImpact_Paid / Eff_Spread_Paid),
+    PI_R_PI_Total = to_pct * PriceImpact_Paid_Races / PriceImpact_Paid,
+    PI_R_ES = to_pct * PriceImpact_Paid_Races / Eff_Spread_Paid,
+    PI_NotR_ES_NotR = to_pct * PriceImpact_Paid_NotRaces/Eff_Spread_Paid_NotRaces,
+    RaceProfits_DD_ES = to_pct * Race_Profits_DispDepth / Eff_Spread_Paid,
+    RaceProfits_DD_ES_NotR = to_pct * Race_Profits_DispDepth / Eff_Spread_Paid_NotRaces,
+    RaceProfits_Active_ES = to_pct * Race_Profits_ActiveQty / Eff_Spread_Paid,
+    LossA_ES = to_pct * LossAvoidance / Eff_Spread_Paid)]
   
   ### Set NA values in ratios caused by zero division to zero
   symdate[Vol == 0, c('Race_Profits_DispDepth_bps','Pct_Value_Traded_Race',
@@ -213,13 +207,13 @@ generate.symdate.groupby = function(symdate, by.vars) {
   groupby[Vol_Races==0, c('Eff_Spread_Races_bps')] = 0
   ## Spread Decomposition
   groupby = groupby[, `:=`(
-                           Realized_Spread_bps = Eff_Spread_bps - PriceImpact_bps,
-                           Realized_Spread_Races_bps = Eff_Spread_Races_bps - PriceImpact_Races_bps,
-                           Realized_Spread_NotRaces_bps = Eff_Spread_NotRaces_bps - PriceImpact_NotRaces_bps,
-                           PI_ES = to_pct * PriceImpact_Paid/Eff_Spread_Paid,
-                           PI_R_PI_Total = to_pct * PriceImpact_Paid_Races/PriceImpact_Paid,
-                           PI_R_ES = to_pct * PriceImpact_Paid_Races/Eff_Spread_Paid,
-                           LossA_ES = to_pct * LossAvoidance_bps/Eff_Spread_bps)]
+    Realized_Spread_bps = Eff_Spread_bps - PriceImpact_bps,
+    Realized_Spread_Races_bps = Eff_Spread_Races_bps - PriceImpact_Races_bps,
+    Realized_Spread_NotRaces_bps = Eff_Spread_NotRaces_bps - PriceImpact_NotRaces_bps,
+    PI_ES = to_pct * PriceImpact_Paid/Eff_Spread_Paid,
+    PI_R_PI_Total = to_pct * PriceImpact_Paid_Races/PriceImpact_Paid,
+    PI_R_ES = to_pct * PriceImpact_Paid_Races/Eff_Spread_Paid,
+    LossA_ES = to_pct * LossAvoidance_bps/Eff_Spread_bps)]
   return (groupby)
 }
 
@@ -263,7 +257,7 @@ write.vars.summary.table = function(data, vars, desc, cols.precision, outfile.na
   #' @param outfile.name output file name.
   #' @param out.dir output directory.
   #' @return None, output to file.
-
+  
   rows = list()
   for (i in 1:length(vars)) {
     row = get.var.percentiles.row(data, vars[i], cols.precision)
@@ -311,10 +305,10 @@ write.poisson.tables = function(symdate, potential.race.horizons, time_total_hr,
   #' @param outfile.name file name prefix of the output, without the extension
   #' @param out.dir output directory
   #' @return None, output to file
-
+  
   time_total_us = time_total_hr * 3600. * 1000000.
   symdate[, Avg_Arrival_Rate_RaceRlvt_Side := (N_Msgs_Inbound_NBBO/2.)/time_total_us]
-
+  
   for (t in potential.race.horizons){
     # Get the number of occurrences of T periods of time in a symbol-date
     num_t_increments = time_total_us/as.numeric(t)
@@ -327,7 +321,7 @@ write.poisson.tables = function(symdate, potential.race.horizons, time_total_hr,
     symdate[[sprintf('exp_N2_%s', t)]] = symdate[[sprintf('prob2_RaceRlvt_Side_%s', t)]]*num_t_increments
     symdate[[sprintf('exp_N3_%s', t)]] = symdate[[sprintf('prob3_RaceRlvt_Side_%s', t)]]*num_t_increments
   }
-
+  
   vars = c(sprintf('exp_N2_%s', potential.race.horizons), sprintf('exp_N3_%s', potential.race.horizons))
   desc = c(sprintf('Expected potential race events with 2+ participants within %s', potential.race.horizons),
            sprintf('Expected potential race events with 3+ participants within %s', potential.race.horizons))

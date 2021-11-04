@@ -1,8 +1,10 @@
 '''
 Prep_Order_Book.py
 
-This scripts reconstruct the order book based on the message data and 
+This module reconstructs the order book based on the message data and 
 the economic events inside the matching engine.
+Please see Section 10.2 of the Code and Data Appendix, as well as the
+docstring for prepare_order_book() for implementation details.
 
 Reference:
     Section 10.2 of the Code and Data Appendix.
@@ -18,56 +20,6 @@ Output:
         - depth at best bid and ask
     2. Depth Info: Dictionary with keys for each side and price that provides 
         the depth at each message where the depth changes for that price and side.
-
-Steps: 
-    0. Load data
-    1. Identify Book Updating messages: 
-        For Trades, we will remove liquidity as of the earlier of the two
-        trade messages. In cases where the aggressive party in the trade posts
-        depth to the book, we will add this liquidity when we remove the
-        liquidity for the last trade in the event. 
-        For non-trades, we will add/remove depth at the outbound message. 
-        This section identifies the relevant messages and copies them to the time
-        at which they will update the book.
-
-        1.1 Flag the last message of each event. For inbounds with multiple aggressive trades or IOCs that 
-            trade and expire we flag the last message. In all other cases, there is only one outbound message.
-        1.2 Pair trades.
-        1.3 Generate UpdateRelevant fields (copy information on 2nd party of trade to first party's index
-            if it has the first flag).
-        1.4 Flag as book updating the UpdateRelevant messages if their event changes the book.
-            (e.g. the post to book message in a New order accepted event gets flagged as book updating).
-
-    2. Update and Correct the Book: Loop over outbound messages, on each iteration of the loop:
-        2.1 Add the current best bid/ask to the message in the top dataset and 
-            update/cancel the depth for that price and side if the message is book updating.
-        2.2 Correct the book on update relevant messages when it is inconsistent with the 
-            internal logic of order books or with BBO (a field that flags some messages as 
-            joining the best bid/ask).
-
-            Note on Order Book Correction:
-            With perfect message data, all market events in the matching engine can be observed
-            in the form of combinations of inbounds and outbounds. However, the data may not be 
-            perfect in practice. When the data fails to satisfy the following conditions, the 
-            order book reconstructed can be off and book correction is necessary:
-                1. In a trade where the aggressive party partially fills and then posts to book, 
-                    it is assumed that the non-traded depth is posted to book as of the 1st trade 
-                    message observed in the data.
-                    (The book could be off for a few messages if it takes time for ME to add the 
-                    remaining depth to the book.)
-                2. The sequence of outbound messages is the same as the sequence of events in the 
-                    matching engine. That is to say, outbound messages should change the book in 
-                    the order they appear in the data.
-                    (In reality, messages may overtake each other after leaving the matching engine.)
-                3. The data has all messages. 
-                    (This is usually not the case due to packet loss.)
-            The order book correction creates a necessary layer of protection against imperfect data.
-            Please refer to the code block for implementation details.
-
-    3. Clean Data Structure for Final Output: 
-        Populate all non-book messages in top of book dataset by forward filling the bbo
-        from the most recent book updating message and generate additional stats.
-
 '''
 ################################################################################################################################
 
@@ -83,9 +35,23 @@ from .utils.Logger import getLogger
 
 def prepare_order_book(runtime, date, sym, args, paths):
     '''
-    This function reads in the message data of the specified sym-date 
-    and return the BBO and Depth data of that sym-date.
-    This function is called from the master script main.py.
+    Function that reads in the message data of the specified sym-date 
+    and returns the Top-of-Book and Depth data of that sym-date. 
+    
+    User note: this is a particularly long function because it goes through all
+    the different types of economic events that affect the order book. There are
+    more than 30 types of events recognized by this package. Examples include:
+        "New order accepted", "New order expired",
+        "New order aggressively executed in full",
+        "New order passively executed in full", 
+        "Order cancel accepted", "Order cancel failed", etc.
+    Please refer to Section 10.2 of the Code and Data Appendix for a complete list
+    of events. The variety of exchange economic events adds up to the number of 
+    lines in this function. We may break this function into several smaller 
+    subfunctions in future versions of the code.
+    
+
+    Please refer to Section 10.2 of the Code and Data Appendix.
 
     Params:  
         runtime: str, for log purpose.
@@ -116,7 +82,58 @@ def prepare_order_book(runtime, date, sym, args, paths):
             where the depth changes for that price and side.
                 - E.g., depth_updates['Bid'][25] = [(3143, 40), (3454, 0), (4543, 15)] represents the indices 
                 of the messages on which depth changes on the Bid side at price 25 and the total depth of the
-                book after the change.                
+                book after the change.  
+
+    Steps: 
+        0. Load data
+        
+        1. Identify Book Updating messages: 
+            For Trades, we will remove liquidity as of the earlier of the two
+            trade messages. In cases where the aggressive party in the trade posts
+            depth to the book, we will add this liquidity when we remove the
+            liquidity for the last trade in the event. 
+            For non-trades, we will add/remove depth at the outbound message. 
+            This section identifies the relevant messages and copies them to the time
+            at which they will update the book.
+
+            1.1 Flag the last message of each event. For inbounds with multiple aggressive trades or IOCs that 
+                trade and expire we flag the last message. In all other cases, there is only one outbound message.
+            1.2 Pair trades.
+            1.3 Generate UpdateRelevant fields (copy information on 2nd party of trade to first party's index
+                if it has the first flag).
+            1.4 Flag as book updating the UpdateRelevant messages if their event changes the book.
+                (e.g. the post to book message in a New order accepted event gets flagged as book updating).
+        
+        2. Update and Correct the Book: Loop over outbound messages, on each iteration of the loop:
+            2.1 Add the current best bid/ask to the message in the top dataset and 
+                update/cancel the depth for that price and side if the message is book updating.
+            2.2 Correct the book on update relevant messages when it is inconsistent with the 
+                internal logic of order books or with BBO (a field that flags some messages as 
+                joining the best bid/ask).
+
+                Note on Order Book Correction:
+                With perfect message data, all market events in the matching engine can be observed
+                in the form of combinations of inbounds and outbounds. However, the data may not be 
+                perfect in practice. When the data fails to satisfy the following conditions, the 
+                order book reconstructed can be off and book correction is necessary:
+                    1. In a trade where the aggressive party partially fills and then posts to book, 
+                        it is assumed that the non-traded depth is posted to book as of the 1st trade 
+                        message observed in the data.
+                        (The book could be off for a few messages if it takes time for ME to add the 
+                        remaining depth to the book.)
+                    2. The sequence of outbound messages is the same as the sequence of events in the 
+                        matching engine. That is to say, outbound messages should change the book in 
+                        the order they appear in the data.
+                        (In reality, messages may overtake each other after leaving the matching engine.)
+                    3. The data has all messages. 
+                        (This is usually not the case due to packet loss.)
+                The order book correction creates a necessary layer of protection against imperfect data.
+                Please refer to the code block for implementation details.
+        
+        3. Clean Data Structure for Final Output: 
+            Populate all non-book messages in top of book dataset by forward filling the bbo
+            from the most recent book updating message and generate additional stats.
+   
     '''
     # Initialize log
     logpath = '%s/%s/' %(paths['path_logs'], 'MessageDataProcessing_'+runtime)

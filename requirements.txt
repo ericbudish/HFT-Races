@@ -1,0 +1,26 @@
+## requirements.txt 
+# 
+# This file specifies the hardware and software requirements for running 
+# the HFT-Races code.
+# 
+## Hardware
+# We recommend users run the package on a multi-core computing cluster with 
+# sufficient memory and storage. Please see Section 5.1 of the Code and Data 
+# Appendix for detail.
+# 
+## Operating System
+# MacOS or Linux. Our code does not support the Windows operating system. 
+# We recommend Windows 10 users set up Windows Subsystem for Linux and run the 
+# code in the virtual Linux system.
+#
+## Python requirements
+# Make sure Python >= 3.6 is installed. The code requires the following Python    
+# packages. To install the required packages, use
+#     pip install -r requirements.txt
+pandas>=1.1.0
+numpy>=1.18.0
+## R requirements
+# Make sure R >= 4.0.0 is installed. The following R packages are required 
+# and they will be installed automatically when you run the R code: 
+#    'data.table','R.utils','stargazer','Hmisc','ggridges','ggplot2','scales',
+#    'dplyr','reshape2'

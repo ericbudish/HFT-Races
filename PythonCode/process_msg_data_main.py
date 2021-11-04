@@ -89,7 +89,8 @@ from LatencyArbitrageAnalysis.Trading_and_Order_Book_Stats import calculate_symd
 
 from LatencyArbitrageAnalysis.utils.Logger import getLogger
 from LatencyArbitrageAnalysis.utils.Monitor_Logs import MonitorLogs
-from LatencyArbitrageAnalysis.utils.Collect_Statistics import CollectStats
+from LatencyArbitrageAnalysis.utils.Collect_Statistics import collect_stats
+from LatencyArbitrageAnalysis.utils.Dtypes import dtypes_raw_msgs, dtypes_msgs, dtypes_top
 ###################################################################################
 ################################## SET PARAMETERS #################################
 ###################################################################################
@@ -118,6 +119,8 @@ file_symdates = '/path/to/All_SymDates.csv.gz'
 ### Path to log file directory 
 path_logs = '/path/to/Logs/'
 ### Path to intermediate file directory
+# Note: Files in the path_temp folder are used in the subsequent process.
+# Do NOT remove files from the directory before the analysis is finished.
 path_temp = '/path/to/Temp/'
 ### Path to the output file directory
 path_output = '/path/to/Output/'
@@ -141,7 +144,7 @@ max_dec_scale = 5
 ###################################################################################
 ################################### MAIN PROGRAM ##################################
 ###################################################################################
-# Define the main function
+# Define the main function for Message Data Processing
 def main(runtime, date, sym, args, paths):
     # Initialize logger
     logpath = '%s/%s/' %(paths['path_logs'], 'MessageDataProcessing_'+runtime)
@@ -152,43 +155,17 @@ def main(runtime, date, sym, args, paths):
     logger.info('Timer Start: %s' % (str(timer_st)))
     logger.info('Process ID: %s' % (pid))
 
-    # Message Data Processing
-
     # Event Classification
     logger.info('Launching message classification...')
-    try:
-        classify_messages(runtime, date, sym, args, paths)
-    except (SystemExit, KeyboardInterrupt):
-        logger.error('Failed. SystemExit or KeyboardInterrupt')
-        return None
-    except Exception as e:
-        logger.error('Failed. Error: %s' % e)
-        logger.error(traceback.format_exc())
-        return None
+    run_process(logger, classify_messages, runtime, date, sym, args, paths)
 
     # Order Book Preparation
     logger.info('Launching order book preparation...')
-    try:
-        prepare_order_book(runtime, date, sym, args, paths)
-    except (SystemExit, KeyboardInterrupt):
-        logger.error('Failed. SystemExit or KeyboardInterrupt')
-        return None
-    except Exception as e:
-        logger.error('Failed. Error: %s' % e)
-        logger.error(traceback.format_exc())
-        return None
+    run_process(logger, prepare_order_book, runtime, date, sym, args, paths)
 
     # Symbol-Date and Trade Level Statistics
     logger.info('Launching symbol date and trade level stats')
-    try:
-        calculate_symdate_stats(runtime, date, sym, args, paths)
-    except (SystemExit, KeyboardInterrupt):
-        logger.error('Failed. SystemExit or KeyboardInterrupt')
-        return None
-    except Exception as e:
-        logger.error('Failed. Error: %s' % e)
-        logger.error(traceback.format_exc())
-        return None
+    run_process(logger, calculate_symdate_stats, runtime, date, sym, args, paths)
 
     timer_end = datetime.datetime.now()
     logger.info('Complete.')
@@ -197,6 +174,18 @@ def main(runtime, date, sym, args, paths):
 
     ans = [date, sym, pid, timer_st, timer_end]
     return (ans)
+
+# Define the process runner
+def run_process(logger, process, runtime, date, sym, args, paths):
+    try:
+        process(runtime, date, sym, args, paths)
+    except (SystemExit, KeyboardInterrupt):
+        logger.error('Failed. SystemExit or KeyboardInterrupt')
+        return None
+    except Exception as e:
+        logger.error('Failed. Error: %s' % e)
+        logger.error(traceback.format_exc())
+        return None
 
 # Define the multiprocessing wrapper
 def multi_process_wrapper(args):
@@ -219,7 +208,7 @@ def create_folder_structure(pairs, temp_path_list):
 if __name__ == '__main__':
     # Get runtime information
     now = datetime.datetime.now()
-    runtime = '%02d%02d%02d_%02d%02d' % (now.year, now.month, now.day, now.hour, now.minute)
+    runtime = '%02d%02d%02d_%02d%02d%02d' % (now.year, now.month, now.day, now.hour, now.minute, now.second)
     print('The runtime is: ' + runtime)
     # Set up the log folder
     logpath = '%s/%s/' %(path_logs, 'MessageDataProcessing_'+runtime)
@@ -240,70 +229,12 @@ if __name__ == '__main__':
     ###### Construct Input
     ## price unit to convert price-related variables into integers by multiplication.
     price_factor = int(10 ** (max_dec_scale+1))
-    ## Dict of data type
-    dtypes_raw_msgs = {
-        'ClientOrderID':'O', 'UniqueOrderID':'O', 'TradeMatchID': 'O', 
-        'UserID':'O', 'FirmID':'O', 'SessionID':'float64',
-        'MessageTimestamp':'O', 'MessageType':'O', 'OrderType':'O',
-        'ExecType':'O', 'OrderStatus':'O', 'TradeInitiator':'O', 
-        'TIF':'O', 'CancelRejectReason': 'O',
-        'Side':'O', 'OrderQty':'float64', 'DisplayQty':'float64', 
-        'LimitPrice':'float64', 'StopPrice':'float64',
-        'ExecutedPrice': 'float64',  'ExecutedQty': 'float64', 'LeavesQty': 'float64',
-        'QuoteRelated':'bool',
-        'BidPrice':'float64', 'BidSize':'float64', 
-        'AskPrice':'float64', 'AskSize':'float64',
-        'RegularHour':'bool'} 
-        # OpenAuctionTrade and AuctionTrade contain NAs
-        # because they are only populated in trade confirmation messages.
-        # So we do not specify the dtype when reading them in.
-        # We will replace the NAs with False in the program (Classify_Messages.py).
-
-    dtypes_msgs = {
-        'ClientOrderID':'O', 'UniqueOrderID':'O', 'TradeMatchID': 'O', 
-        'UserID':'O', 'FirmID':'O', 'SessionID':'float64',
-        'MessageTimestamp':'O', 'MessageType':'O', 'OrderType':'O',
-        'ExecType':'O', 'OrderStatus':'O', 'TradeInitiator':'O', 
-        'TIF':'O', 'CancelRejectReason': 'O',
-        'Side':'O', 'OrderQty':'float64', 'DisplayQty':'float64', 
-        'LimitPrice':'float64', 'StopPrice':'float64',
-        'ExecutedPrice': 'float64', 'ExecutedQty': 'float64', 'LeavesQty': 'float64',
-        'QuoteRelated':'bool',
-        'BidPrice':'float64', 'BidSize':'float64', 
-        'AskPrice':'float64', 'AskSize':'float64',
-        'RegularHour':'bool','OpenAuctionTrade':'bool', 'AuctionTrade':'bool',
-        'UnifiedMessageType': 'O',
-        'PrevPriceLvl': 'float64', 'PrevQty': 'float64', 'PriceLvl': 'float64', 
-        'Categorized': 'bool', 'EventNum': 'float64', 'Event': 'O', 
-        'MinExecPriceLvl':'float64', 'MaxExecPriceLvl':'float64', 
-        'PrevBidPriceLvl': 'float64', 'PrevBidQty': 'float64', 'BidPriceLvl': 'float64', 
-        'BidCategorized': 'bool', 'BidEventNum': 'float64', 'BidEvent': 'O', 
-        'BidMinExecPriceLvl':'float64', 'BidMaxExecPriceLvl':'float64', 
-        'PrevAskPriceLvl': 'float64', 'PrevAskQty': 'float64', 'AskPriceLvl': 'float64', 
-        'AskCategorized': 'bool', 'AskEventNum': 'float64', 'AskEvent': 'O',
-        'AskMinExecPriceLvl':'float64', 'AskMaxExecPriceLvl':'float64'}
-        
-    dtypes_top = {
-        'MessageTimestamp': 'O', 'Side': 'O','UnifiedMessageType': 'O',
-        'RegularHour':'bool','OpenAuctionTrade':'bool','AuctionTrade':'bool',
-        'BestBid': 'float64','BestBidQty': 'float64', 'BestAsk': 'float64','BestAskQty': 'float64', 
-        'Spread': 'float64','MidPt': 'float64', 
-        'last_BestBid': 'float64', 'last_BestAsk': 'float64','last_MidPt': 'float64', 
-        't_last_chg_BestBid': 'O', 't_last_chg_BestAsk': 'O','t_last_chg_MidPt': 'O',
-        'Corrections_OrderAccept': 'float64','Corrections_Trade': 'float64',  
-        'Corrections_notA': 'float64', 
-        'Corrections_OrderAccept_h': 'float64','Corrections_Trade_h': 'float64',  
-        'Corrections_notA_h': 'float64', 
-        'DepthKilled': 'float64', 'DepthKilled_h': 'float64', 
-        'BestBid_TickSize': 'float64', 'BestAsk_TickSize': 'float64','Diff_TickSize': 'O',
-        'Trade_Pos': 'O', 'BookUpdateParentMsgID': 'float64'}
-
+    ## Construct paths
     paths = {
         'path_logs': path_logs,
         'path_data': path_msg_data,
         'path_temp': path_temp,
         'path_output': path_output}
-
     ## Write args and paths to a txt file for retaining parameters of runs
     technical_arg_log = '%s/%s/' %(path_logs, 'TechnicalSpecifications')
     if not os.path.exists(technical_arg_log):
@@ -355,21 +286,18 @@ if __name__ == '__main__':
     logs = MonitorLogs(runtime, pairs, paths)
     ###################################################################################
     # Combine stats files
+    print('#################################')
     time_st = datetime.datetime.now()
     print('Start Collecting Trade and Symdate Statistics: %s' % str(time_st))
-    
-    # Trade Level Statistics
-    if logs['Status_Trading_and_Order_Book_Stats'].value_counts().loc['Done'].item() == len(pairs) : 
+    if logs[(logs['Status_Trading_and_Order_Book_Stats'] == 'Done')].shape[0] == len(pairs):
+        # Trade Level Statistics
         collect = 'Trade_Stats'
-        CollectStats(runtime, paths, pairs, collect)
-    else: 
-        print('Did not complete Trade_Stats collection, use MonitorLogs to check for reasons')
-    
-    # Symbol-date Level Statistics
-    if logs['Status_Trading_and_Order_Book_Stats'].value_counts().loc['Done'].item() == len(pairs) : 
+        collect_stats(runtime, paths, pairs, collect)
+        # Symbol-date Level Statistics
         collect = 'SymDate_Stats'
-        CollectStats(runtime, paths, pairs, collect)
+        collect_stats(runtime, paths, pairs, collect)
+        print('Runtime %s Finished Collecting Trade and Symdate Statistics: %s' % (runtime, str(datetime.datetime.now() - time_st)))
     else: 
-        print('Did not complete SymDate_Stats collection, use MonitorLogs to check for reasons')
-        
-    print('Runtime %s Finished Collecting Statistics: %s' % (runtime, str(datetime.datetime.now() - time_st)))
+        print('Runtime %s Did not complete Trade and SymDate Stats collection, use MonitorLogs to check for reasons' % (runtime))
+
+    
