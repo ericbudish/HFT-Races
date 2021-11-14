@@ -6,7 +6,7 @@ This code should be used in conjunction with the detailed documentation linked b
 
 ## About
 
-Version 1.0 (September 2021). Please visit [https://github.com/ericbudish/HFT-Races](https://github.com/ericbudish/HFT-Races) to check for updates. 
+Version 1.1 (November 2021). Please visit [https://github.com/ericbudish/HFT-Races](https://github.com/ericbudish/HFT-Races) to check for updates. 
 
 ## Documentation
 
